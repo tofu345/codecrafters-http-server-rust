@@ -85,8 +85,8 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
 
 pub struct Request<'a> {
     path: &'a str,
-    method: &'a str,
-    host: &'a str,
+    _method: &'a str,
+    _host: &'a str,
     agent: &'a str,
 }
 

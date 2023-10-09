@@ -48,6 +48,8 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
                 let file_path = directory.join(filename);
                 let contents = fs::read_to_string(file_path.clone());
 
+                println!("{:?}", req);
+
                 if req.method == "POST" {
                     println!("body: {}", req.body);
                     fs::write(file_path, req.body).expect("unable to write");
@@ -99,8 +101,6 @@ pub struct Request {
 impl Request {
     fn parse(data: &String) -> Result<Request, Box<dyn Error>> {
         let mut lines = data.split("\r\n").map(|s| s.replace("\0", ""));
-
-        println!("data {:?}", lines.clone().collect::<Vec<String>>());
 
         let line = lines.next().expect("invalid http data");
         let line: Vec<&str> = line.split(" ").collect();

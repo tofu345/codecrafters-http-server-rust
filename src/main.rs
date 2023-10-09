@@ -24,7 +24,7 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
             "/" => (200, None),
             x if x.starts_with("/echo") => (
                 200,
-                x.strip_prefix("/echo").map(|x| Body {
+                x.strip_prefix("/echo/").map(|x| Body {
                     contents: x.as_bytes(),
                     mime: "text/plain",
                 }),

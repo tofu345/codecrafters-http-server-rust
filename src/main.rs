@@ -10,7 +10,7 @@ fn main() {
 
     println!("{args:?}");
 
-    if let Some(v) = args.get(3) {
+    if let Some(v) = args.get(2) {
         dir.push_str(v.as_str());
     };
 

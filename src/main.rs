@@ -9,33 +9,6 @@ fn main() {
     while let Ok((stream, addr)) = listener.accept() {
         handle(stream, addr);
     }
-    // for stream in listener.incoming() {
-    //     match stream {
-    //         Ok(mut stream) => {
-    //             let mut data = [0; 1024];
-    //             stream.read(&mut data).unwrap();
-
-    //             let data = parse_http_request(&data);
-
-    //             let first_line = data.split("\r\n").next().unwrap();
-    //             let path = first_line.split(" ").collect::<Vec<&str>>()[1];
-
-    //             if path == "/" {
-    //                 stream.write("HTTP/1.1 200 OK\r\n\r\n".as_bytes()).unwrap();
-    //             } else if path.starts_with("/echo/") {
-    //                 let message = path.split("/echo/").last().unwrap();
-    //                 stream.write(format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", message.len(), message).as_bytes()).unwrap();
-    //             } else {
-    //                 stream
-    //                     .write("HTTP/1.1 404 NOT FOUND\r\n\r\n".as_bytes())
-    //                     .unwrap();
-    //             }
-    //         }
-    //         Err(e) => {
-    //             println!("error: {}", e);
-    //         }
-    //     }
-    // }
 }
 
 fn handle(mut stream: TcpStream, _addr: SocketAddr) {
@@ -85,8 +58,8 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
 
 pub struct Request<'a> {
     path: &'a str,
-    _method: &'a str,
-    _host: &'a str,
+    method: &'a str,
+    host: &'a str,
     agent: &'a str,
 }
 
@@ -118,9 +91,9 @@ impl<'a> Request<'a> {
         let agent = line[1];
 
         Ok(Request {
-            _method: method,
+            method,
             path,
-            _host: host,
+            host,
             agent,
         })
     }

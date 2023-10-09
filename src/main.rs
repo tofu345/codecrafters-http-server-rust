@@ -36,7 +36,7 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
                     mime: "text/plain",
                 }),
             ),
-            _ => unimplemented!(),
+            _ => (404, None),
         };
 
         write!(

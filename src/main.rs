@@ -25,7 +25,7 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
 
         let mut _file_contents = String::new();
 
-        let (code, body) = match req.path {
+        let (code, body) = match req.path.as_str() {
             "/" => (200, None),
             x if x.starts_with("/echo") => (
                 200,
@@ -89,32 +89,29 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
 }
 
 #[derive(Debug)]
-pub struct Request<'a> {
-    path: &'a str,
-    method: &'a str,
-    headers: HashMap<&'a str, &'a str>,
+pub struct Request {
+    path: String,
+    method: String,
+    headers: HashMap<String, String>,
     body: String,
 }
 
-impl<'a> Request<'a> {
-    fn parse(data: &'a String) -> Result<Request<'a>, Box<dyn Error>> {
-        let mut lines = data.split("\r\n");
+impl Request {
+    fn parse(data: &String) -> Result<Request, Box<dyn Error>> {
+        let mut lines = data.split("\r\n").map(|s| s.replace("\0", ""));
 
-        println!("data {:?}", lines.clone().collect::<Vec<&str>>());
+        println!("data {:?}", lines.clone().collect::<Vec<String>>());
 
-        let line: Vec<&str> = lines
-            .next()
-            .expect("invalid http data")
-            .split(" ")
-            .collect();
+        let line = lines.next().expect("invalid http data");
+        let line: Vec<&str> = line.split(" ").collect();
 
-        let method = line.get(0).expect("invalid http data");
-        let path = line.get(1).expect("invalid http data");
+        let method = line.get(0).expect("invalid http data").to_string();
+        let path = line.get(1).expect("invalid http data").to_string();
         let mut headers = HashMap::new();
 
         for line in lines {
             if let Some((k, v)) = line.split_once(": ") {
-                headers.insert(k, v);
+                headers.insert(k.to_string(), v.to_string());
             }
         }
 

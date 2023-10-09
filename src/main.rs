@@ -8,7 +8,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut dir = String::new();
 
-    println!("{args:?}");
+    println!("{args:?} ");
 
     if let Some(v) = args.get(2) {
         dir.push_str(v.as_str());

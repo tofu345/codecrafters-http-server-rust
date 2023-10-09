@@ -2,17 +2,20 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
-use std::thread;
+use std::{env, fs, thread};
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    let dir = args.get(3).expect("missing directory param");
+
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
 
     while let Ok((stream, addr)) = listener.accept() {
-        handle(stream, addr);
+        handle(stream, addr, dir.clone());
     }
 }
 
-fn handle(mut stream: TcpStream, _addr: SocketAddr) {
+fn handle(mut stream: TcpStream, _addr: SocketAddr, dir: String) {
     thread::spawn(move || {
         let mut buffer = [0; 4096];
         let read_bytes = stream.read(&mut buffer).unwrap();
@@ -20,6 +23,8 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
 
         let buffer = String::from_utf8(buffer.to_vec()).expect("invalid utf8");
         let req = Request::parse(&buffer).unwrap();
+
+        let mut _file_contents = String::new();
 
         let (code, body) = match req.path {
             "/" => (200, None),
@@ -37,6 +42,23 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
                     mime: "text/plain",
                 }),
             ),
+            x if x.starts_with("/files") => {
+                let filename = x.strip_prefix("/files/").unwrap();
+                let contents = fs::read_to_string(format!("{dir}/{filename}"));
+
+                if let Err(_) = contents {
+                    (404, None)
+                } else {
+                    _file_contents = contents.unwrap();
+                    (
+                        200,
+                        Some(Body {
+                            contents: _file_contents.as_bytes(),
+                            mime: "application/octet-stream",
+                        }),
+                    )
+                }
+            }
             _ => (404, None),
         };
 

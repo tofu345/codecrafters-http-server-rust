@@ -10,17 +10,19 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
-                println!("accepted new connection");
                 let mut data = [0; 1024];
-                let _data = stream.read(&mut data).unwrap();
+                stream.read(&mut data).unwrap();
 
-                let data: Vec<u8> = data.into_iter().collect();
-                let data = String::from_utf8(data).unwrap();
+                let data = parse_http_request(&data);
+
                 let first_line = data.split("\r\n").next().unwrap();
                 let path = first_line.split(" ").collect::<Vec<&str>>()[1];
 
                 if path == "/" {
                     stream.write("HTTP/1.1 200 OK\r\n\r\n".as_bytes()).unwrap();
+                } else if path.starts_with("/echo/") {
+                    let message = path.split("/echo/").last().unwrap();
+                    stream.write(format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", message.len(), message).as_bytes()).unwrap();
                 } else {
                     stream
                         .write("HTTP/1.1 404 NOT FOUND\r\n\r\n".as_bytes())
@@ -32,4 +34,8 @@ fn main() {
             }
         }
     }
+}
+
+fn parse_http_request(request: &[u8]) -> String {
+    String::from_utf8(request.to_vec()).unwrap()
 }

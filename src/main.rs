@@ -8,6 +8,8 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut dir = String::new();
 
+    println!("{args:?}");
+
     if let Some(v) = args.get(3) {
         dir.push_str(v.as_str());
     };
@@ -49,7 +51,6 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr, dir: String) {
             x if x.starts_with("/files") => {
                 let filename = x.strip_prefix("/files/").unwrap();
                 let file_path = format!("{}/{}", dir, filename);
-                println!("file_path {}, dir {}", file_path, dir);
                 let contents = fs::read_to_string(file_path);
 
                 if let Err(_) = contents {

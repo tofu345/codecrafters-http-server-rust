@@ -49,7 +49,7 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr, dir: String) {
             x if x.starts_with("/files") => {
                 let filename = x.strip_prefix("/files/").unwrap();
                 let file_path = format!("{}/{}", dir, filename);
-                println!("file_path {}", file_path);
+                println!("file_path {}, dir {}", file_path, dir);
                 let contents = fs::read_to_string(file_path);
 
                 if let Err(_) = contents {

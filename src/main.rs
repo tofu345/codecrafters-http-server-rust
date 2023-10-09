@@ -90,6 +90,8 @@ impl<'a> Request<'a> {
             .collect();
         let agent = line[1];
 
+        println!("{agent}");
+
         Ok(Request {
             method,
             path,

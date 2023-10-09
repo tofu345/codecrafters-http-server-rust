@@ -15,16 +15,8 @@ fn main() {
                 let _data = stream.read(&mut data).unwrap();
 
                 let data: Vec<u8> = data.into_iter().collect();
-                let data = match String::from_utf8(data) {
-                    Ok(v) => v,
-                    Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-                };
-
-                let first_line = match data.split("\r\n").next() {
-                    Some(v) => v,
-                    None => panic!("Invalid HTTP request"),
-                };
-
+                let data = String::from_utf8(data).unwrap();
+                let first_line = data.split("\r\n").next().unwrap();
                 let path = first_line.split(" ").collect::<Vec<&str>>()[1];
 
                 if path == "/" {

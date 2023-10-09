@@ -100,6 +100,8 @@ impl<'a> Request<'a> {
     fn parse(data: &'a String) -> Result<Request<'a>, Box<dyn Error>> {
         let mut lines = data.split("\r\n");
 
+        println!("data {:?}", lines);
+
         let line: Vec<&str> = lines
             .next()
             .expect("invalid http data")

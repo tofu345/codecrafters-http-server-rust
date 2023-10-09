@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -32,7 +33,7 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
             "/user-agent" => (
                 200,
                 Some(Body {
-                    contents: req.agent.as_bytes(),
+                    contents: req.headers.get("User-Agent").unwrap().as_bytes(),
                     mime: "text/plain",
                 }),
             ),
@@ -59,8 +60,7 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
 pub struct Request<'a> {
     path: &'a str,
     method: &'a str,
-    host: &'a str,
-    agent: &'a str,
+    headers: HashMap<&'a str, &'a str>,
 }
 
 impl<'a> Request<'a> {
@@ -72,28 +72,21 @@ impl<'a> Request<'a> {
             .expect("invalid http data")
             .split(" ")
             .collect();
-        let method = line[0];
-        let path = line[1];
 
-        let line: Vec<&str> = lines
-            .next()
-            .expect("invalid http data")
-            .split(" ")
-            .collect();
-        let host = line[1];
+        let method = line.get(0).expect("invalid http data");
+        let path = line.get(1).expect("invalid http data");
+        let mut headers = HashMap::new();
 
-        let line: Vec<&str> = lines
-            .next()
-            .expect("invalid http data")
-            .split(" ")
-            .collect();
-        let agent = line[1];
+        for line in lines {
+            if let Some((k, v)) = line.split_once(": ") {
+                headers.insert(k, v);
+            }
+        }
 
         Ok(Request {
             method,
             path,
-            host,
-            agent,
+            headers,
         })
     }
 }

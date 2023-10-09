@@ -5,23 +5,14 @@ use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::{env, fs, thread};
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let mut dir = String::new();
-
-    println!("{args:?} ");
-
-    if let Some(v) = args.get(2) {
-        dir.push_str(v.as_str());
-    };
-
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
 
     while let Ok((stream, addr)) = listener.accept() {
-        handle(stream, addr, dir.clone());
+        handle(stream, addr);
     }
 }
 
-fn handle(mut stream: TcpStream, _addr: SocketAddr, dir: String) {
+fn handle(mut stream: TcpStream, _addr: SocketAddr) {
     thread::spawn(move || {
         let mut buffer = [0; 4096];
         let read_bytes = stream.read(&mut buffer).unwrap();
@@ -50,8 +41,12 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr, dir: String) {
             ),
             x if x.starts_with("/files") => {
                 let filename = x.strip_prefix("/files/").unwrap();
-                let file_path = format!("{}/{}", dir, filename);
+                let args: Vec<String> = env::args().collect();
+                let directory = env::current_dir().unwrap().join(&args[2]);
+                let file_path = directory.join(filename);
                 let contents = fs::read_to_string(file_path);
+
+                println!("{:?}", req);
 
                 if let Err(_) = contents {
                     (404, None)
@@ -86,6 +81,7 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr, dir: String) {
     });
 }
 
+#[derive(Debug)]
 pub struct Request<'a> {
     path: &'a str,
     method: &'a str,

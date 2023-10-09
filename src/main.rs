@@ -4,8 +4,6 @@ use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::{env, fs, thread};
 
-use itertools::Itertools;
-
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
 

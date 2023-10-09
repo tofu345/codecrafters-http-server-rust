@@ -6,7 +6,11 @@ use std::{env, fs, thread};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let dir = args.get(3).expect("missing directory param");
+    let mut dir = String::new();
+
+    if let Some(v) = args.get(3) {
+        dir.push_str(v.as_str());
+    };
 
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
 
@@ -44,6 +48,15 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr, dir: String) {
             ),
             x if x.starts_with("/files") => {
                 let filename = x.strip_prefix("/files/").unwrap();
+                let mut file_path = String::new();
+
+                if dir != "".to_string() {
+                    file_path.push_str(dir.as_str());
+                    file_path.push('\\');
+                }
+
+                file_path.push_str(filename);
+
                 let contents = fs::read_to_string(format!("{dir}/{filename}"));
 
                 if let Err(_) = contents {

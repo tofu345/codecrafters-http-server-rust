@@ -46,8 +46,6 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
                 let file_path = directory.join(filename);
                 let contents = fs::read_to_string(file_path);
 
-                println!("{:?}", req);
-
                 if let Err(_) = contents {
                     (404, None)
                 } else {
@@ -90,6 +88,8 @@ pub struct Request<'a> {
 
 impl<'a> Request<'a> {
     fn parse(data: &'a String) -> Result<Request<'a>, Box<dyn Error>> {
+        println!("{}", data);
+
         let mut lines = data.split("\r\n");
 
         let line: Vec<&str> = lines

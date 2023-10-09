@@ -4,6 +4,8 @@ use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::{env, fs, thread};
 
+use itertools::Itertools;
+
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
 
@@ -39,25 +41,31 @@ fn handle(mut stream: TcpStream, _addr: SocketAddr) {
                     mime: "text/plain",
                 }),
             ),
-            x if x.starts_with("/files") => {
+            x if x.starts_with("/files") => 'files: {
                 let filename = x.strip_prefix("/files/").unwrap();
                 let args: Vec<String> = env::args().collect();
                 let directory = env::current_dir().unwrap().join(&args[2]);
                 let file_path = directory.join(filename);
-                let contents = fs::read_to_string(file_path);
+                let contents = fs::read_to_string(file_path.clone());
+
+                if req.method == "POST" {
+                    fs::write(file_path, req.body).expect("unable to write");
+
+                    break 'files (201, None);
+                }
 
                 if let Err(_) = contents {
-                    (404, None)
-                } else {
-                    _file_contents = contents.unwrap();
-                    (
-                        200,
-                        Some(Body {
-                            contents: _file_contents.as_bytes(),
-                            mime: "application/octet-stream",
-                        }),
-                    )
+                    break 'files (404, None);
                 }
+
+                _file_contents = contents.unwrap();
+                (
+                    200,
+                    Some(Body {
+                        contents: _file_contents.as_bytes(),
+                        mime: "application/octet-stream",
+                    }),
+                )
             }
             _ => (404, None),
         };
@@ -84,6 +92,7 @@ pub struct Request<'a> {
     path: &'a str,
     method: &'a str,
     headers: HashMap<&'a str, &'a str>,
+    body: String,
 }
 
 impl<'a> Request<'a> {
@@ -102,7 +111,7 @@ impl<'a> Request<'a> {
         let path = line.get(1).expect("invalid http data");
         let mut headers = HashMap::new();
 
-        for line in lines {
+        for line in lines.clone() {
             if let Some((k, v)) = line.split_once(": ") {
                 headers.insert(k, v);
             }
@@ -112,6 +121,7 @@ impl<'a> Request<'a> {
             method,
             path,
             headers,
+            body: lines.join(""),
         })
     }
 }

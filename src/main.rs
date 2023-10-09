@@ -75,7 +75,7 @@ impl<'a> Request<'a> {
         let method = line[0];
         let path = line[1];
 
-        lines.next();
+        // lines.next();
         let line: Vec<&str> = lines
             .next()
             .expect("invalid http data")
@@ -90,7 +90,7 @@ impl<'a> Request<'a> {
             .collect();
         let agent = line[1];
 
-        println!("data: {data}");
+        // println!("data: {data}");
 
         Ok(Request {
             method,

@@ -110,26 +110,19 @@ impl<'a> Request<'a> {
         let path = line.get(1).expect("invalid http data");
         let mut headers = HashMap::new();
 
-        let mut data_before_body = 1;
-
         for line in lines {
             if let Some((k, v)) = line.split_once(": ") {
-                data_before_body += 1;
                 headers.insert(k, v);
             }
         }
 
-        let mut lines = data.split("\r\n");
-
-        for _ in 0..data_before_body {
-            lines.next();
-        }
+        let data: Vec<&str> = data.split("\r\n").collect();
 
         Ok(Request {
             method,
             path,
             headers,
-            body: lines.join(""),
+            body: data[data.len() - 1].to_string(),
         })
     }
 }

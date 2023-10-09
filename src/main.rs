@@ -118,9 +118,9 @@ impl<'a> Request<'a> {
         let agent = line[1];
 
         Ok(Request {
-            method,
+            _method: method,
             path,
-            host,
+            _host: host,
             agent,
         })
     }

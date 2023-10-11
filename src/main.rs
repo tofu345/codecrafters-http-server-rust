@@ -35,8 +35,8 @@ fn files_handler(req: &Request) -> Response {
     let filename = req.path.strip_prefix("/files/").unwrap();
     let args: Vec<String> = env::args().collect();
     let directory = env::current_dir()
-        .expect("missing directory param")
-        .join(&args[2]);
+        .unwrap()
+        .join(&args.get(2).expect("missing directory param"));
     let file_path = directory.join(filename);
     let contents = fs::read_to_string(file_path.clone());
 

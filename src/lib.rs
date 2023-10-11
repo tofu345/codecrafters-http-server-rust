@@ -116,6 +116,7 @@ fn default_not_found_handler(_req: &Request) -> Response {
     Response::text(404, "page not found")
 }
 
+#[derive(Debug)]
 struct Route<'a> {
     path: &'a str,
     methods: Vec<&'a str>,
@@ -129,6 +130,8 @@ impl<'a> Route<'a> {
 
     fn match_route(routes: &'a Vec<Route<'a>>, path: &'a str) -> Option<&'a Route<'a>> {
         routes.iter().find(|r| {
+            println!("-- {:?}", r);
+
             if r.path.contains(":?") {
                 let prefix = r.path.strip_suffix(":?").unwrap();
                 path.starts_with(prefix)

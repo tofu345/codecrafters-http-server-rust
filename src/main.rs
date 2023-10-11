@@ -3,7 +3,7 @@ use std::{env, fs};
 use http_server_starter_rust::{Request, Response, ResponseType, Router};
 
 fn main() {
-    let port = "127.0.0.1:4000";
+    let port = "127.0.0.1:4221";
     let mut r = Router::new(port);
 
     r.handle_func("/", base_handler, vec!["GET"]);

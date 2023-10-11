@@ -106,6 +106,8 @@ impl<'a> Router<'a> {
             } else {
                 write!(stream, "\r\n").expect("failure writing newline");
             }
+
+            stream.flush().unwrap();
         });
     }
 }

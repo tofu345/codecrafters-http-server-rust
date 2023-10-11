@@ -68,8 +68,6 @@ impl<'a> Router<'a> {
             let req = Request::from_stream(&mut stream);
             let route = Route::match_route(&self.routes, req.path.as_str());
 
-            println!("{:?}", route);
-
             println!("-> {}", req.path);
 
             if let Some(route) = route {

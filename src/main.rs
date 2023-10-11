@@ -15,11 +15,9 @@ fn main() {
 fn handle(mut stream: TcpStream, _addr: SocketAddr) {
     thread::spawn(move || {
         let mut buffer = [0; 4096];
-        let read_bytes = stream.read(&mut buffer).unwrap();
-        println!("read {} bytes", read_bytes);
+        let _ = stream.read(&mut buffer).unwrap();
 
-        let buffer = String::from_utf8(buffer.to_vec()).expect("invalid utf8");
-        let req = Request::parse(&buffer).unwrap();
+        let req = Request::parse_from_utf8(&buffer).unwrap();
 
         let mut _file_contents = String::new();
 
@@ -93,6 +91,10 @@ pub struct Request {
 }
 
 impl Request {
+    fn parse_from_utf8(data: &[u8]) -> Result<Request, Box<dyn Error>> {
+        Request::parse(&String::from_utf8(data.to_vec())?)
+    }
+
     fn parse(data: &String) -> Result<Request, Box<dyn Error>> {
         let data = data.replace("\0", "");
         let mut lines = data.split("\r\n");
@@ -121,6 +123,7 @@ impl Request {
     }
 }
 
+#[derive(Debug)]
 pub struct Body<'a> {
     contents: &'a [u8],
     mime: &'a str,

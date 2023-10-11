@@ -68,6 +68,8 @@ impl<'a> Router<'a> {
             let req = Request::from_stream(&mut stream);
             let route = Route::match_route(&self.routes, req.path.as_str());
 
+            println!("{:?}", route);
+
             println!("-> {}", req.path);
 
             if let Some(route) = route {
@@ -129,18 +131,14 @@ impl<'a> Route<'a> {
     }
 
     fn match_route(routes: &'a Vec<Route<'a>>, path: &'a str) -> Option<&'a Route<'a>> {
-        for r in routes.iter() {
+        routes.iter().find(|r| {
             if r.path.contains(":?") {
                 let prefix = r.path.strip_suffix(":?").unwrap();
-                if path.starts_with(prefix) {
-                    return Some(r);
-                }
-            } else if r.path == path {
-                return Some(r);
+                path.starts_with(prefix)
+            } else {
+                r.path == path
             }
-        }
-
-        None
+        })
     }
 }
 

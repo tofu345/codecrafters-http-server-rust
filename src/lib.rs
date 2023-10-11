@@ -236,7 +236,7 @@ impl Response {
         }
     }
 
-    pub fn new_with_mime_type(
+    pub fn with_mime_type(
         code: u16,
         data: Option<Box<dyn ToBytes>>,
         mime: ResponseType,

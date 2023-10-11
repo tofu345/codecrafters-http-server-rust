@@ -46,9 +46,9 @@ fn files_handler(req: &Request) -> Response {
     }
 
     if let Err(_) = contents {
-        Response::new(404, None);
+        return Response::new(404, None);
     }
 
     let contents = contents.unwrap();
-    Response::new_with_mime_type(200, Some(Box::new(contents)), ResponseType::File)
+    Response::with_mime_type(200, Some(Box::new(contents)), ResponseType::File)
 }

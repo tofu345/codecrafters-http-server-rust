@@ -65,6 +65,8 @@ impl<'a> Router<'a> {
         let listener = TcpListener::bind(self.host.clone()).unwrap();
 
         while let Ok((mut stream, _addr)) = listener.accept() {
+            // todo: put code here into thread
+
             let req = Request::from_stream(&mut stream);
             let route = Route::match_route(&self.routes, req.path.as_str());
 

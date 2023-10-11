@@ -129,16 +129,18 @@ impl<'a> Route<'a> {
     }
 
     fn match_route(routes: &'a Vec<Route<'a>>, path: &'a str) -> Option<&'a Route<'a>> {
-        routes.iter().find(|r| {
-            println!("-- {:?}", r);
-
+        for r in routes.iter() {
             if r.path.contains(":?") {
                 let prefix = r.path.strip_suffix(":?").unwrap();
-                path.starts_with(prefix)
-            } else {
-                r.path == path
+                if path.starts_with(prefix) {
+                    return Some(r);
+                }
+            } else if r.path == path {
+                return Some(r);
             }
-        })
+        }
+
+        None
     }
 }
 

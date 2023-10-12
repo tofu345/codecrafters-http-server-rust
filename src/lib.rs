@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::net::TcpStream;
-use std::{collections::HashMap, error::Error, fmt::Display, io, net::TcpListener, thread};
+use std::{collections::HashMap, error::Error, io, net::TcpListener, thread};
 
 pub struct Router<'a> {
     host: String,
@@ -42,7 +42,7 @@ impl<'a> Router<'a> {
     /// r.handle_func("/test", test, vec!["GET"]); // never reached because of wildcard
     ///
     /// fn test(_req: &Request) -> Response {
-    ///     Response::text(200, "hi")
+    ///     Response::new(200, "hi")
     /// }
     /// ```
     pub fn handle_func(&mut self, path: &'a str, handler: Handler, methods: Vec<&'a str>) {
@@ -100,7 +100,7 @@ impl<'a> Router<'a> {
             .unwrap();
 
             if let Some(data) = res.data.take() {
-                res.write_headers(data.as_bytes().len(), &mut stream)
+                res.write_headers(&mut stream)
                     .expect("failure writing headers");
                 stream.write_all(data.as_bytes()).unwrap();
             } else {
@@ -113,11 +113,11 @@ impl<'a> Router<'a> {
 }
 
 fn default_method_not_allowed_handler(_req: &Request) -> Response {
-    Response::text(404, "method not allowed")
+    Response::new(404, "method not allowed")
 }
 
 fn default_not_found_handler(_req: &Request) -> Response {
-    Response::text(404, "page not found")
+    Response::new(404, "page not found")
 }
 
 #[derive(Debug)]
@@ -204,60 +204,105 @@ impl ToBytes for String {
     }
 }
 
-pub enum ResponseType {
-    Text,
-    File,
-}
-
-impl Display for ResponseType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use ResponseType::*;
-
-        let text = match self {
-            Text => "text/plain",
-            File => "application/octet-stream",
-        };
-
-        write!(f, "{}", text)
+impl ToBytes for &str {
+    fn as_bytes(&self) -> &[u8] {
+        self.to_owned().as_bytes()
     }
 }
 
 pub struct Response {
     code: u16,
-    data: Option<Box<dyn ToBytes>>,
-    mime: ResponseType,
+    data: Option<Box<dyn ToBytes + 'static>>,
+    headers: HashMap<String, String>,
 }
 
 impl Response {
-    pub fn new(code: u16, data: Option<Box<dyn ToBytes>>) -> Response {
+    /// Returns new Response
+    /// # Example
+    ///
+    /// ```
+    /// use http_server_starter_rust::{Response, Request};
+    ///
+    /// fn test(_req: &Request) -> Response {
+    ///     Response::new(200, "hi")
+    /// }
+    /// ```
+    pub fn new(code: u16, data: impl ToBytes + 'static) -> Response {
+        let mut headers = HashMap::new();
+        headers.insert("Content-Type".to_owned(), "text/plain".to_owned());
+        headers.insert(
+            "Content-Length".to_owned(),
+            data.as_bytes().len().to_string(),
+        );
+
         Response {
             code,
-            data,
-            mime: ResponseType::Text,
+            data: Some(Box::new(data)),
+            headers,
         }
     }
 
-    pub fn with_mime_type(
-        code: u16,
-        data: Option<Box<dyn ToBytes>>,
-        mime: ResponseType,
-    ) -> Response {
-        Response { code, data, mime }
-    }
-
-    pub fn text(code: u16, text: &str) -> Response {
+    /// Returns new response with no data
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use http_server_starter_rust::{Request, Response};
+    ///
+    /// fn test(_req: &Request) -> Response {
+    ///     Response::empty(200)
+    /// }
+    /// ```
+    pub fn empty(code: u16) -> Response {
         Response {
             code,
-            data: Some(Box::new(text.to_string())),
-            mime: ResponseType::Text,
+            data: None,
+            headers: HashMap::new(),
         }
     }
 
-    fn write_headers(&self, content_len: usize, f: &mut impl io::Write) -> io::Result<()> {
-        write!(
-            f,
-            "Content-Type: {}\r\nContent-Length: {}\r\n\r\n",
-            self.mime, content_len
-        )
+    /// Returns new response with specified headers
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use http_server_starter_rust::{Request, Response};
+    ///
+    /// fn test(_req: &Request) -> Response {
+    ///     Response::empty(200).add_header("foo", "bar")
+    /// }
+    /// ```
+    pub fn add_header(mut self, key: &str, val: &str) -> Response {
+        self.headers.insert(key.to_owned(), val.to_owned());
+        self
+    }
+
+    /// Adds headers to current response with specified headers
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use http_server_starter_rust::{Request, Response};
+    ///
+    /// fn test(_req: &Request) -> Response {
+    ///     let mut res = Response::empty(200);
+    ///
+    ///     res.add_headers("foo", "bar");
+    ///     res.add_headers("foo2", "bar");
+    ///     res
+    /// }
+    /// ```
+    pub fn add_headers(&mut self, key: &str, val: &str) {
+        self.headers.insert(key.to_owned(), val.to_owned());
+    }
+
+    fn write_headers(&self, f: &mut impl io::Write) -> io::Result<()> {
+        let mut output = String::new();
+        for (key, val) in self.headers.iter() {
+            output.push_str(format!("{key}: {val}\r\n").as_str());
+        }
+
+        output.push_str("\r\n");
+        write!(f, "{}", output)
     }
 }

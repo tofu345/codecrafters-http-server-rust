@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use http_server_starter_rust::{Request, Response, ResponseType, Router};
+use http_server_starter_rust::{Request, Response, Router};
 
 fn main() {
     let port = "127.0.0.1:4221";
@@ -16,19 +16,19 @@ fn main() {
 }
 
 fn base_handler(_req: &Request) -> Response {
-    Response::new(200, None)
+    Response::empty(200)
 }
 
 fn echo_handler(req: &Request) -> Response {
-    let x = req.path.strip_prefix("/echo/").unwrap();
+    let x = req.path.strip_prefix("/echo/").unwrap().to_owned();
 
-    Response::text(200, x)
+    Response::new(200, x)
 }
 
 fn user_agent_handler(req: &Request) -> Response {
-    let agent = req.headers.get("User-Agent").unwrap();
+    let agent = req.headers.get("User-Agent").unwrap().to_owned();
 
-    Response::text(200, &agent)
+    Response::new(200, agent)
 }
 
 fn files_handler(req: &Request) -> Response {
@@ -42,13 +42,13 @@ fn files_handler(req: &Request) -> Response {
 
     if req.method == "POST" {
         fs::write(file_path, req.body.clone()).expect("unable to write");
-        return Response::new(201, None);
+        return Response::empty(201);
     }
 
     if let Err(_) = contents {
-        return Response::new(404, None);
+        return Response::empty(404);
     }
 
     let contents = contents.unwrap();
-    Response::with_mime_type(200, Some(Box::new(contents)), ResponseType::File)
+    Response::new(200, contents).add_header("Content-Type", "application/octet-stream")
 }

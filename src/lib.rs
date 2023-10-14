@@ -1,15 +1,14 @@
 use std::io::Write;
 use std::net::TcpStream;
+use std::sync::Arc;
 use std::{collections::HashMap, error::Error, io, net::TcpListener, thread};
 
-pub struct Router<'a> {
+pub struct Router {
     host: String,
-    routes: Vec<Route<'a>>,
-    method_not_allowed_handler: Handler,
-    not_found_handler: Handler,
+    routes: Vec<Route>,
 }
 
-impl<'a> Router<'a> {
+impl Router {
     /// # Examples
     /// ```
     /// use http_server_starter_rust::Router;
@@ -20,8 +19,6 @@ impl<'a> Router<'a> {
         Router {
             routes: vec![],
             host: addr.to_string(),
-            method_not_allowed_handler: default_method_not_allowed_handler,
-            not_found_handler: default_not_found_handler,
         }
     }
 
@@ -45,94 +42,94 @@ impl<'a> Router<'a> {
     ///     Response::new(200, "hi")
     /// }
     /// ```
-    pub fn handle_func(&mut self, path: &'a str, handler: Handler, methods: Vec<&'a str>) {
+    pub fn handle_func(&mut self, path: &str, handler: Handler, methods: Vec<&str>) {
         let route = Route {
-            path,
-            methods,
+            path: path.to_owned(),
+            methods: methods
+                .into_iter()
+                .map(|x| x.to_owned())
+                .collect::<Vec<String>>(),
             handler,
         };
 
         self.routes.push(route);
     }
 
-    /// Sets custom not found handler
-    pub fn not_found_handler(&mut self, f: Handler) {
-        self.not_found_handler = f;
-    }
-
     /// Runs Tcp Server on specified port
     pub fn serve(&self) {
         let listener = TcpListener::bind(self.host.clone()).unwrap();
+        let routes = Arc::new(self.routes.to_vec());
 
         while let Ok((mut stream, _addr)) = listener.accept() {
             // todo: put code here into thread
+            let routes = Arc::clone(&routes);
 
-            let req = Request::from_stream(&mut stream);
-            let route = Route::match_route(&self.routes, req.path.as_str());
+            thread::spawn(move || {
+                let req = Request::from_stream(&mut stream);
+                let route = Route::match_route(&routes, req.path.as_str());
 
-            println!("-> {}", req.path);
+                println!("-> {}", req.path);
 
-            if let Some(route) = route {
-                if !route.has_method(req.method.as_str()) {
-                    Router::handle(self.method_not_allowed_handler, req, stream);
-                    continue;
+                if let Some(route) = route {
+                    if !route.has_method(req.method.as_str()) {
+                        handle(method_not_allowed_handler, req, stream);
+                        return;
+                    }
+
+                    let handler = route.handler;
+                    handle(handler, req, stream)
+                } else {
+                    handle(not_found_handler, req, stream);
                 }
-
-                let handler = route.handler;
-                Router::handle(handler, req, stream)
-            } else {
-                Router::handle(self.not_found_handler, req, stream);
-            }
+            });
         }
-    }
-
-    /// Runs handler in seperate thread and writes data to stream
-    fn handle(f: Handler, req: Request, mut stream: TcpStream) {
-        thread::spawn(move || {
-            let mut res = f(&req);
-
-            write!(
-                stream,
-                "HTTP/1.1 {} {}\r\n",
-                res.code,
-                if res.code == 200 { "OK" } else { " " },
-            )
-            .unwrap();
-
-            if let Some(data) = res.data.take() {
-                res.write_headers(&mut stream)
-                    .expect("failure writing headers");
-                stream.write_all(data.as_bytes()).unwrap();
-            } else {
-                write!(stream, "\r\n").expect("failure writing newline");
-            }
-
-            stream.flush().unwrap();
-        });
     }
 }
 
-fn default_method_not_allowed_handler(_req: &Request) -> Response {
+/// Runs handler in seperate thread and writes data to stream
+fn handle(f: Handler, req: Request, mut stream: TcpStream) {
+    let mut res = f(&req);
+
+    write!(
+        stream,
+        "HTTP/1.1 {} {}\r\n",
+        res.code,
+        if res.code == 200 { "OK" } else { " " },
+    )
+    .unwrap();
+
+    if let Some(data) = res.data.take() {
+        res.write_headers(&mut stream)
+            .expect("failure writing headers");
+        stream.write_all(data.as_bytes()).unwrap();
+    } else {
+        write!(stream, "\r\n").expect("failure writing newline");
+    }
+
+    stream.flush().unwrap();
+}
+
+fn method_not_allowed_handler(_req: &Request) -> Response {
     Response::new(404, "method not allowed")
 }
 
-fn default_not_found_handler(_req: &Request) -> Response {
+fn not_found_handler(_req: &Request) -> Response {
     Response::new(404, "page not found")
 }
 
-#[derive(Debug)]
-struct Route<'a> {
-    path: &'a str,
-    methods: Vec<&'a str>,
+#[derive(Debug, Clone)]
+struct Route {
+    path: String,
+    methods: Vec<String>,
     handler: Handler,
 }
 
-impl<'a> Route<'a> {
-    fn has_method(&self, method: &'a str) -> bool {
-        self.methods.contains(&method)
+impl Route {
+    fn has_method(&self, method: &str) -> bool {
+        self.methods.contains(&method.to_owned())
     }
 
-    fn match_route(routes: &'a Vec<Route<'a>>, path: &'a str) -> Option<&'a Route<'a>> {
+    fn match_route<'a>(routes: &'a Vec<Route>, path: &str) -> Option<&'a Route> {
         routes.iter().find(|r| {
             if r.path.contains(":?") {
                 let prefix = r.path.strip_suffix(":?").unwrap();

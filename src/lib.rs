@@ -164,8 +164,8 @@ impl Request {
         let line = lines.next().expect("invalid http data");
         let line: Vec<&str> = line.split(" ").collect();
 
-        let method = line.get(0).expect("invalid http data").to_string();
-        let path = line.get(1).expect("invalid http data").to_string();
+        let method = line.get(0).expect("missing method in request").to_string();
+        let path = line.get(1).expect("missing path in request").to_string();
         let mut headers = HashMap::new();
 
         for line in lines {

@@ -279,6 +279,8 @@ impl Response {
 
     /// Adds headers to current response with specified headers
     ///
+    /// Handy when adding multiple headers
+    ///
     /// # Example
     ///
     /// ```

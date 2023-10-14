@@ -132,7 +132,10 @@ impl Route {
     fn match_route<'a>(routes: &'a Vec<Route>, path: &str) -> Option<&'a Route> {
         routes.iter().find(|r| {
             if r.path.contains(":?") {
-                let prefix = r.path.strip_suffix(":?").unwrap();
+                let prefix = r
+                    .path
+                    .strip_suffix(":?")
+                    .expect("wildcard ':?' must be at the end");
                 path.starts_with(prefix)
             } else {
                 r.path == path

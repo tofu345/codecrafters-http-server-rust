@@ -18,7 +18,7 @@ impl Router {
     pub fn new(addr: &str) -> Router {
         Router {
             routes: vec![],
-            host: addr.to_string(),
+            host: addr.to_owned(),
         }
     }
 
@@ -61,7 +61,6 @@ impl Router {
         let routes = Arc::new(self.routes.to_vec());
 
         while let Ok((mut stream, _addr)) = listener.accept() {
-            // todo: put code here into thread
             let routes = Arc::clone(&routes);
 
             thread::spawn(move || {
@@ -153,7 +152,7 @@ pub struct Request {
 }
 
 impl Request {
-    fn parse_from_utf8(data: &[u8]) -> Result<Request, Box<dyn Error>> {
+    fn from_utf8(data: &[u8]) -> Result<Request, Box<dyn Error>> {
         Request::parse(String::from_utf8(data.to_vec())?)
     }
 
@@ -188,7 +187,7 @@ impl Request {
         let mut buffer = [0; 4096];
         s.read(&mut buffer).unwrap();
 
-        Request::parse_from_utf8(&buffer).unwrap()
+        Request::from_utf8(&buffer).unwrap()
     }
 }
 

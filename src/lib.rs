@@ -75,8 +75,7 @@ impl Router {
                         return;
                     }
 
-                    let handler = route.handler;
-                    handle(handler, req, stream)
+                    handle(route.handler, req, stream)
                 } else {
                     handle(not_found_handler, req, stream);
                 }

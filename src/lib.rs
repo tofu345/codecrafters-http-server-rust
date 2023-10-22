@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::io::Write;
 use std::net::TcpStream;
 use std::sync::Arc;
@@ -99,7 +100,7 @@ fn handle(f: Handler, req: Request, mut stream: TcpStream) {
     if let Some(data) = res.data.take() {
         res.write_headers(&mut stream)
             .expect("failure writing headers");
-        stream.write_all(data.as_bytes()).unwrap();
+        stream.write_all(format!("{}", data).as_bytes()).unwrap();
     } else {
         write!(stream, "\r\n").expect("failure writing newline");
     }
@@ -192,25 +193,9 @@ impl Request {
 
 pub type Handler = fn(&Request) -> Response;
 
-pub trait ToBytes {
-    fn as_bytes(&self) -> &[u8];
-}
-
-impl ToBytes for String {
-    fn as_bytes(&self) -> &[u8] {
-        self.as_bytes()
-    }
-}
-
-impl ToBytes for &str {
-    fn as_bytes(&self) -> &[u8] {
-        self.to_owned().as_bytes()
-    }
-}
-
 pub struct Response {
     code: u16,
-    data: Option<Box<dyn ToBytes + 'static>>,
+    data: Option<Box<dyn Display + 'static>>,
     headers: HashMap<String, String>,
 }
 
@@ -225,12 +210,12 @@ impl Response {
     ///     Response::new(200, "hi")
     /// }
     /// ```
-    pub fn new(code: u16, data: impl ToBytes + 'static) -> Response {
+    pub fn new(code: u16, data: impl Display + 'static) -> Response {
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_owned(), "text/plain".to_owned());
         headers.insert(
             "Content-Length".to_owned(),
-            data.as_bytes().len().to_string(),
+            format!("{}", data).as_bytes().len().to_string(),
         );
 
         Response {

@@ -1,4 +1,4 @@
-use std::{env, fs};
+use std::{collections::HashMap, env, fs};
 
 use http_server_starter_rust::{Request, Response, Router};
 
@@ -10,9 +10,17 @@ fn main() {
     r.handle_func("/echo/:?", echo_handler, vec!["GET"]);
     r.handle_func("/user-agent", user_agent_handler, vec!["GET"]);
     r.handle_func("/files/:?", files_handler, vec!["GET", "POST"]);
+    r.handle_func("/json", json_handler, vec!["GET"]);
 
     println!("Listening on port {}", port);
     r.serve();
+}
+
+fn json_handler(_req: &Request) -> Response {
+    let mut data = HashMap::new();
+    data.insert("foo", "bar");
+
+    Response::json(200, data)
 }
 
 fn base_handler(_req: &Request) -> Response {

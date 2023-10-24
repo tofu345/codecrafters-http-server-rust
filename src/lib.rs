@@ -71,7 +71,7 @@ impl Router {
                 println!("-> {}", req.path);
 
                 if let Some(route) = route {
-                    if !route.has_method(req.method.as_str()) {
+                    if !route.methods.contains(&req.method) {
                         handle(method_not_allowed_handler, req, stream);
                         return;
                     }
@@ -109,7 +109,7 @@ fn handle(f: Handler, req: Request, mut stream: TcpStream) {
 }
 
 fn method_not_allowed_handler(_req: &Request) -> Response {
-    Response::new(404, "method not allowed")
+    Response::new(405, "method not allowed")
 }
 
 fn not_found_handler(_req: &Request) -> Response {
@@ -124,10 +124,6 @@ struct Route {
 }
 
 impl Route {
-    fn has_method(&self, method: &str) -> bool {
-        self.methods.contains(&method.to_owned())
-    }
-
     fn match_route<'a>(routes: &'a Vec<Route>, path: &str) -> Option<&'a Route> {
         routes.iter().find(|r| {
             if r.path.contains(":?") {
@@ -193,6 +189,28 @@ impl Request {
 
 pub type Handler = fn(&Request) -> Response;
 
+struct Json<K, V>(HashMap<K, V>);
+
+impl<K, V> Display for Json<K, V>
+where
+    K: Display,
+    V: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut string = String::from("{");
+
+        for (i, (k, v)) in self.0.iter().enumerate() {
+            string.push_str(&format!("\"{}\": \"{}\"", k, v));
+            if i != (self.0.len() - 1) {
+                string.push(',');
+            }
+        }
+
+        string.push_str("}");
+        write!(f, "{}", string)
+    }
+}
+
 pub struct Response {
     code: u16,
     data: Option<Box<dyn Display + 'static>>,
@@ -242,6 +260,34 @@ impl Response {
             data: None,
             headers: HashMap::new(),
         }
+    }
+
+    /// Returns new json response
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use http_server_starter_rust::{Request, Response};
+    /// use std::collections::HashMap;
+    ///
+    /// fn test(_req: &Request) -> Response {
+    ///     let mut data = HashMap::new();
+    ///     data.insert("foo", "bar");
+    ///
+    ///     Response::json(200, data)
+    /// }
+    /// ```
+    pub fn json<K, V>(code: u16, data: HashMap<K, V>) -> Response
+    where
+        K: Display + 'static,
+        V: Display + 'static,
+    {
+        Response {
+            code,
+            data: Some(Box::new(Json(data))),
+            headers: HashMap::new(),
+        }
+        .add_header("Content-Type", "application/json")
     }
 
     /// Returns new response with specified headers

@@ -53,8 +53,8 @@ fn files_handler(req: &Request) -> Response {
         return Response::empty(201);
     }
 
-    if let Err(_) = contents {
-        return Response::empty(404);
+    if let Err(e) = contents {
+        return Response::new(404, e);
     }
 
     let contents = contents.unwrap();

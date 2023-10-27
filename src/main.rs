@@ -14,7 +14,9 @@ async fn main() {
     r.handle_func("/json", json_handler, vec!["GET"]);
 
     println!("Listening on port {}", port);
-    r.serve().await.unwrap();
+    if let Err(e) = r.serve().await {
+        eprintln!("Err: {}", e);
+    };
 }
 
 fn json_handler(_req: &Request) -> Response {

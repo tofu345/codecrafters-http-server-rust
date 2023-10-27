@@ -2,7 +2,8 @@ use std::{collections::HashMap, env, fs};
 
 use http_server_starter_rust::{Request, Response, Router};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let port = "127.0.0.1:4221";
     let mut r = Router::new(port);
 
@@ -13,7 +14,7 @@ fn main() {
     r.handle_func("/json", json_handler, vec!["GET"]);
 
     println!("Listening on port {}", port);
-    r.serve();
+    r.serve().await.unwrap();
 }
 
 fn json_handler(_req: &Request) -> Response {

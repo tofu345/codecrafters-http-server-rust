@@ -108,6 +108,8 @@ impl Router {
 
                     output.push_str(&res.to_string());
 
+                    println!("-> / response: {}", res.to_string());
+
                     match socket.write_all(output.as_bytes()).await {
                         Ok(_) => (),
                         Err(e) => eprintln!("Error writing response: {}", e),

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use std::sync::Arc;
-use std::{collections::HashMap, error::Error, io};
+use std::{collections::HashMap, io};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
@@ -108,8 +108,15 @@ impl Router {
 
                     output.push_str(&res.to_string());
 
-                    let _ = socket.write_all(output.as_bytes());
-                    let _ = socket.flush();
+                    match socket.write_all(output.as_bytes()).await {
+                        Ok(_) => (),
+                        Err(e) => eprintln!("Error writing response: {}", e),
+                    };
+
+                    match socket.flush().await {
+                        Ok(_) => (),
+                        Err(e) => eprintln!("Error flushing response: {}", e),
+                    };
                 }
             });
         }
@@ -156,19 +163,35 @@ pub struct Request {
 }
 
 impl Request {
-    fn from_utf8(data: &[u8]) -> Result<Request, Box<dyn Error>> {
-        Request::parse(String::from_utf8(data.to_vec())?)
+    fn from_utf8(data: &[u8]) -> Result<Request, &'static str> {
+        let data = match String::from_utf8(data.to_vec()) {
+            Ok(v) => v,
+            Err(_) => return Err("Error converting http request to string"),
+        };
+
+        Request::parse(data)
     }
 
-    fn parse(data: String) -> Result<Request, Box<dyn Error>> {
+    fn parse(data: String) -> Result<Request, &'static str> {
         let data = data.replace("\0", "");
         let mut lines = data.split("\r\n");
 
-        let line = lines.next().expect("invalid http data");
+        let line = match lines.next() {
+            Some(v) => v,
+            None => return Err("invalid http data"),
+        };
+
         let line: Vec<&str> = line.split(" ").collect();
 
-        let method = line.get(0).expect("missing method in request").to_string();
-        let path = line.get(1).expect("missing path in request").to_string();
+        let method = match line.get(0) {
+            Some(v) => v.to_string(),
+            None => return Err("missing method in request"),
+        };
+        let path = match line.get(1) {
+            Some(v) => v.to_string(),
+            None => return Err("missing path in request"),
+        };
+
         let mut headers = HashMap::new();
 
         for line in lines {
@@ -214,7 +237,7 @@ where
 
 pub struct Response {
     code: u16,
-    data: Option<Box<dyn Display + 'static>>,
+    data: Option<Box<dyn Display + Send + 'static>>,
     headers: HashMap<String, String>,
 }
 
@@ -229,12 +252,12 @@ impl Response {
     ///     Response::new(200, "hi")
     /// }
     /// ```
-    pub fn new(code: u16, data: impl Display + 'static) -> Response {
+    pub fn new(code: u16, data: impl Display + Send + 'static) -> Response {
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_owned(), "text/plain".to_owned());
         headers.insert(
             "Content-Length".to_owned(),
-            format!("{}", data).as_bytes().len().to_string(),
+            data.to_string().len().to_string(),
         );
 
         Response {
@@ -280,8 +303,8 @@ impl Response {
     /// ```
     pub fn json<K, V>(code: u16, data: HashMap<K, V>) -> Response
     where
-        K: Display + 'static,
-        V: Display + 'static,
+        K: Display + Send + 'static,
+        V: Display + Send + 'static,
     {
         Response {
             code,

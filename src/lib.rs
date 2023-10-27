@@ -68,58 +68,52 @@ impl Router {
             tokio::spawn(async move {
                 let mut buf = [0; 4096];
 
-                loop {
-                    let n = match socket.read(&mut buf).await {
-                        Ok(n) if n == 0 => return,
-                        Ok(n) => n,
-                        Err(e) => {
-                            eprintln!("failed to read from socket; err = {:?}", e);
-                            return;
-                        }
-                    };
-
-                    let req = Request::from_utf8(&mut buf[0..n]);
-                    if let Err(ref err) = req {
-                        eprintln!("{}", err);
+                let n = match socket.read(&mut buf).await {
+                    Ok(n) if n == 0 => return,
+                    Ok(n) => n,
+                    Err(e) => {
+                        eprintln!("failed to read from socket; err = {:?}", e);
                         return;
-                    };
-                    let req = req.unwrap();
-                    let route = Route::match_route(&routes, req.path.as_str());
+                    }
+                };
 
-                    println!("-> {}", req.path);
+                let req = Request::from_utf8(&mut buf[0..n]);
+                if let Err(ref err) = req {
+                    eprintln!("{}", err);
+                    return;
+                };
+                let req = req.unwrap();
+                let route = Route::match_route(&routes, req.path.as_str());
 
-                    let handler: Handler = match route {
-                        Some(route) => {
-                            if !route.methods.contains(&req.method) {
-                                method_not_allowed_handler
-                            } else {
-                                route.handler
-                            }
+                println!("-> {}", req.path);
+
+                let handler: Handler = match route {
+                    Some(route) => {
+                        if !route.methods.contains(&req.method) {
+                            method_not_allowed_handler
+                        } else {
+                            route.handler
                         }
-                        None => not_found_handler,
-                    };
+                    }
+                    None => not_found_handler,
+                };
 
-                    let res = handler(&req);
-                    let mut output = format!(
-                        "HTTP/1.1 {} {}\r\n",
-                        res.code,
-                        if res.code == 200 { "OK" } else { " " }
-                    );
+                let res = handler(&req);
+                let mut output = format!(
+                    "HTTP/1.1 {} {}\r\n",
+                    res.code,
+                    if res.code == 200 { "OK" } else { " " }
+                );
 
-                    output.push_str(&res.to_string());
+                output.push_str(&res.to_string());
 
-                    println!("-> / response: {}", res.to_string());
+                if let Err(e) = socket.write_all(output.as_bytes()).await {
+                    eprintln!("Error writing response: {}", e);
+                };
 
-                    match socket.write_all(output.as_bytes()).await {
-                        Ok(_) => (),
-                        Err(e) => eprintln!("Error writing response: {}", e),
-                    };
-
-                    match socket.flush().await {
-                        Ok(_) => (),
-                        Err(e) => eprintln!("Error flushing response: {}", e),
-                    };
-                }
+                if let Err(e) = socket.flush().await {
+                    eprintln!("Error flushing response: {}", e);
+                };
             });
         }
     }
@@ -358,6 +352,10 @@ impl Response {
         for (key, val) in self.headers.iter() {
             output.push_str(&format!("{key}: {val}\r\n"));
         }
+
+        if self.headers.len() != 0 {
+            output.push_str("\r\n")
+        };
 
         if let Some(ref data) = self.data {
             output.push_str(&format!("{}", data));
